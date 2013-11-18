@@ -5,23 +5,27 @@ try:
     import Cython.Distutils
 except ImportError:
     cmdclass = {}
-    ext_modules = None
+    suffix = ".cpp"
 else:
     cmdclass = {"build_ext": Cython.Distutils.build_ext}
-    ext_modules = [
-        setuptools.extension.Extension(
-            "bdaq.wrapper",
-            ["bdaq/wrapper.pyx"],
-            include_dirs=[],
-            undef_macros=["NDEBUG"],
-            define_macros=[],
-            libraries=["biodaq"],
-            extra_compile_args=[
-                "-std=gnu++0x",
-                "-Werror",
-                "-Wno-uninitialized",
-                "-Wno-write-strings"],
-            language="c++")]
+    suffix = ".pyx"
+
+ext_modules = [
+    setuptools.extension.Extension(
+        "bdaq.wrapper",
+        map(
+            lambda path: path + suffix,
+            ["bdaq/wrapper"]),
+        include_dirs=[],
+        undef_macros=["NDEBUG"],
+        define_macros=[],
+        libraries=["biodaq"],
+        extra_compile_args=[
+            "-std=gnu++0x",
+            "-Werror",
+            "-Wno-uninitialized",
+            "-Wno-write-strings"],
+        language="c++")]
 
 requires = []
 
