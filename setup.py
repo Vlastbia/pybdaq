@@ -26,12 +26,11 @@ ext_modules = [
             "-Wno-uninitialized",
             "-Wno-write-strings"],
         language="c++")]
-
 requires = []
 
 setuptools.setup(
     name="pybdaq",
-    version="0.0.1",
+    version="0.0.3",
     packages=setuptools.find_packages(),
     cmdclass=cmdclass,
     ext_modules=ext_modules,
@@ -42,6 +41,7 @@ setuptools.setup(
     license="MIT",
     keywords="daq wrapper library bionic advantech usb",
     url="https://github.com/angaza/pybdaq",
+    include_package_data=True,
     classifiers=[
         "License :: OSI Approved :: MIT License",
         "Development Status :: 3 - Alpha",
