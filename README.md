@@ -27,7 +27,7 @@ package, install the following packages inside the "drivers" and "SDK"
 directories:
 
 * biokernbase-dkms
-* bio&lt;device&gt; (where &lt;device&gt is, e.g., "4704")
+* bio&lt;device&gt; (where &lt;device&gt; is, e.g., "4704")
 * libbio<device>
 * libbiodaq
 
@@ -39,7 +39,7 @@ After installing the Advantech software, installation of this Python library
 should be straightforward using pip and PyPI:
 
 ```sh
-pip install pybdaq
+$ pip install pybdaq
 ```
 
 As usual, the use of a virtualenv is strongly recommended.
@@ -47,7 +47,8 @@ As usual, the use of a virtualenv is strongly recommended.
 Credits
 -------
 
-This library is developed by [Angaza Design](http://www.angazadesign.com).
+This library has been developed largely by [Angaza Design](http://www.angazadesign.com),
+but external contributions are welcome.
 
 License
 -------
