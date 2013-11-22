@@ -30,7 +30,7 @@ requires = []
 
 setuptools.setup(
     name="pybdaq",
-    version="0.0.4",
+    version="0.0.5",
     packages=setuptools.find_packages(),
     cmdclass=cmdclass,
     ext_modules=ext_modules,
