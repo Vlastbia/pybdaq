@@ -273,13 +273,18 @@ cdef class InstantDoCtrl(DoCtrlBase):
         return list(raw)
 
     def write(self, start, data):
+        # copy output data in memory buffer
         cdef uint8_t[:] raw = cvarray(
             shape=(len(data),),
             itemsize=sizeof(uint8_t),
-            format="u")
+            format="B")
 
-        raw[:] = data
+        cdef int i
 
+        for i in xrange(len(data)):
+            raw[i] = int(data[i])
+
+        # write to hardware
         cdef _c.ErrorCode error = self.c3().Write(
             <int32_t>start,
             <int32_t>len(data),

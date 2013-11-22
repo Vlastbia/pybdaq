@@ -30,7 +30,7 @@ requires = []
 
 setuptools.setup(
     name="pybdaq",
-    version="0.0.3",
+    version="0.0.4",
     packages=setuptools.find_packages(),
     cmdclass=cmdclass,
     ext_modules=ext_modules,
@@ -40,7 +40,7 @@ setuptools.setup(
     description="data acquisition hardware (DAQ) SDK wrapper",
     license="MIT",
     keywords="daq wrapper library bionic advantech usb",
-    url="https://github.com/angaza/pybdaq",
+    url="http://github.com/angaza/pybdaq",
     include_package_data=True,
     classifiers=[
         "License :: OSI Approved :: MIT License",

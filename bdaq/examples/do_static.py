@@ -3,7 +3,7 @@ import bdaq
 
 def main():
     # open the device
-    instant_do = bdaq.InstantDO()
+    instant_do = bdaq.InstantDoCtrl()
 
     instant_do.selected_device = bdaq.DeviceInformation(number=0)
 
