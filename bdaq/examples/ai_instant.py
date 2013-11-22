@@ -10,19 +10,16 @@ def main(device_name="USB-4702, BID#0", start=0, count=1):
 
     instant_ai = bdaq.InstantAiCtrl()
 
-    instant_ai.selected_device = bdaq.DeviceInformation(
-        #description=device_name)
-        number=0)
+    instant_ai.selected_device = bdaq.DeviceInformation(number=0)
 
     # acquire data forever
     try:
         print "acquisition in progress"
 
-        #count_max = instant_ai.features.channel_count_max
-        count_max = 128
+        count_max = instant_ai.features.channel_count_max
 
         while True:
-            scaled_data = instant_ai.read_raw(start, count)
+            scaled_data = instant_ai.read_scaled(start, count)
 
             for (i, value) in enumerate(scaled_data):
                 print "channel {} data: {:10.6f}".format(

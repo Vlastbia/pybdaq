@@ -251,7 +251,7 @@ cdef class DoCtrlBase(DioCtrlBase):
 
 cdef class InstantDoCtrl(DoCtrlBase):
     def __cinit__(self):
-        self._this = _c.AdxInstantAiCtrlCreate()
+        self._this = _c.AdxInstantDoCtrlCreate()
 
     cdef _c.InstantDoCtrl* c3(self):
         raise_on_null(self._this)
@@ -279,10 +279,8 @@ cdef class InstantDoCtrl(DoCtrlBase):
             itemsize=sizeof(uint8_t),
             format="B")
 
-        cdef int i
-
-        for i in xrange(len(data)):
-            raw[i] = int(data[i])
+        for (i, v) in enumerate(map(int, data)):
+            raw[i] = v
 
         # write to hardware
         cdef _c.ErrorCode error = self.c3().Write(
