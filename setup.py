@@ -10,22 +10,29 @@ else:
     cmdclass = {"build_ext": Cython.Distutils.build_ext}
     suffix = ".pyx"
 
-ext_modules = [
-    setuptools.extension.Extension(
-        "bdaq.wrapper",
-        map(
-            lambda path: path + suffix,
-            ["bdaq/wrapper"]),
-        include_dirs=[],
-        undef_macros=["NDEBUG"],
-        define_macros=[],
-        libraries=["biodaq"],
-        extra_compile_args=[
-            "-std=gnu++0x",
-            "-Werror",
-            "-Wno-uninitialized",
-            "-Wno-write-strings"],
-        language="c++")]
+ext_module_sources = [
+    ("bdaq.wrapper", ["bdaq/wrapper"]),
+    ("bdaq.wrapper_enums", ["bdaq/wrapper_enums"])]
+ext_modules = []
+
+for (module_name, module_paths) in ext_module_sources:
+    ext_modules.append(
+        setuptools.extension.Extension(
+            module_name,
+            map(
+                lambda path: path + suffix,
+                module_paths),
+            include_dirs=[],
+            undef_macros=["NDEBUG"],
+            define_macros=[],
+            libraries=["biodaq"],
+            extra_compile_args=[
+                "-std=gnu++0x",
+                "-Werror",
+                "-Wno-uninitialized",
+                "-Wno-write-strings"],
+            language="c++"))
+
 requires = []
 
 setuptools.setup(
