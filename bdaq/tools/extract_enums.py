@@ -19,7 +19,7 @@ class ExtractedEnum(object):
         file_.write("\nclass {}(enum.Enum):\n".format(self.tag_name))
 
         for name in self.value_names:
-            file_.write(" " * 4 + "{0} = c.{0}\n".format(name))
+            file_.write(" " * 4 + "{0} = _c.{0}\n".format(name))
 
     @staticmethod
     def from_xml(element, typedefs):
@@ -60,7 +60,7 @@ def write_cython(pyx_file, pxd_file, enums):
     # write pyx file header
     pyx_file.write("# GENERATED FILE; DO NOT MODIFY\n\n")
     pyx_file.write("import enum\n\n")
-    pyx_file.write("cimport wrapper_enums_c as c\n\n")
+    pyx_file.write("cimport wrapper_enums_c as _c\n\n")
 
     # write enums
     for extracted in enums:
