@@ -8,8 +8,7 @@ def main():
     instant_do.selected_device = bdaq.DeviceInformation(number=0)
 
     # write DO ports
-    #instant_do.write(0, [True])
-    instant_do.write(0, [True])
+    instant_do.write(0, [True, True, True, True, False, False, False, False])
 
     print "DO output completed!"
 
