@@ -430,7 +430,7 @@ cdef class InstantDoCtrl(DoCtrlBase):
         # XXX unpack bits into boolean array
         return list(raw)
 
-    def write(self, start, data):
+    def write(self, data, start=0):
         # pack list of bools into bytes
         data_bytes = pack_bits(data)
 
