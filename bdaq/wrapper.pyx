@@ -102,6 +102,71 @@ cdef MathInterval math_interval_from_c(_c.MathInterval interval):
         interval.Max)
 
 
+cdef class AnalogChannel:
+    cdef _c.AnalogChannel* _this
+    cdef object _wards
+
+    def __cinit__(self, wards=()):
+        self._wards = wards
+
+    cdef _c.AnalogChannel* c0(self):
+        raise_on_null(self._this)
+
+        return self._this
+
+    property channel:
+        def __get__(self):
+            return self.c0().getChannel()
+
+    property value_range:
+        def __get__(self):
+            return enums.ValueRange(self.c0().getValueRange())
+
+        def __set__(self, range_):
+            cdef enums_c.ErrorCode error = self.c0().setValueRange(range_.value)
+
+            raise_on_failure(error)
+
+
+cdef class AnalogInputChannel(AnalogChannel):
+    cdef _c.AnalogInputChannel* c1(self):
+        return <_c.AnalogInputChannel*>self.c0()
+
+    property signal_type:
+        def __get__(self):
+            return enums.AiSignalType(self.c1().getSignalType())
+
+        def __set__(self, type_):
+            cdef enums_c.ErrorCode error = self.c1().setSignalType(type_.value)
+
+            raise_on_failure(error)
+
+    property burnout_ret_type:
+        def __get__(self):
+            return enums.BurnoutRetType(self.c1().getBurnoutRetType())
+
+        def __set__(self, type_):
+            cdef enums_c.ErrorCode error = self.c1().setBurnoutRetType(type_.value)
+
+            raise_on_failure(error)
+
+    property burnout_ret_value:
+        def __get__(self):
+            return self.c1().getBurnoutRetValue()
+
+        def __set__(self, value):
+            cdef enums_c.ErrorCode error = self.c1().setBurnoutRetValue(value)
+
+            raise_on_failure(error)
+
+cdef AnalogInputChannel make_analog_input_channel(_c.AnalogInputChannel* channel_c, wards=()):
+    cdef AnalogInputChannel channel = AnalogInputChannel(wards=wards)
+
+    channel._this = channel_c
+
+    return channel
+
+
 cdef class CjcSetting:
     cdef InstantAiCtrl _instant_ai
 
@@ -163,30 +228,30 @@ cdef class AiFeatures(object):
         # extract feature values
         cdef _c.AiFeatures* features = self.c0()
 
-        self.resolution = features.getResolution()
-        self.data_size = features.getDataSize()
-        self.data_mask = features.getDataMask()
-        self.channel_count_max = features.getChannelCountMax()
-        self.channel_type = enums.AiChannelType(features.getChannelType())
-        self.overall_value_range = features.getOverallValueRange()
-        self.thermo_supported = features.getThermoSupported()
-        self.buffered_ai_supported = features.getBufferedAiSupported()
-        self.channel_start_base = features.getChannelStartBase()
-        self.channel_count_base = features.getChannelCountBase()
-        self.burst_scan_supported = features.getBurstScanSupported()
-        self.scan_count_max = features.getScanCountMax()
-        self.trigger_supported = features.getTriggerSupported()
-        self.trigger_count = features.getTriggerCount()
-        self.trigger_1_supported = features.getTrigger1Supported()
+        #self.resolution = features.getResolution()
+        #self.data_size = features.getDataSize()
+        #self.data_mask = features.getDataMask()
+        #self.channel_count_max = features.getChannelCountMax()
+        #self.channel_type = enums.AiChannelType(features.getChannelType())
+        #self.overall_value_range = features.getOverallValueRange()
+        #self.thermo_supported = features.getThermoSupported()
+        #self.scan_count_max = features.getScanCountMax()
+        #self.trigger_supported = features.getTriggerSupported()
+        #self.trigger_count = features.getTriggerCount()
+        #self.trigger_1_supported = features.getTrigger1Supported()
 
         # prevent modification
-        def setattr(self):
-            raise Exception("read-only property")
+        #def setattr(self):
+            #raise Exception("read-only property")
 
-        self.__setattr__ = setattr
+        #self.__setattr__ = setattr
 
     cdef _c.AiFeatures* c0(self):
         return self._instant_ai.c2().getFeatures()
+
+    property resolution:
+        def __get__(self):
+            return self.c0().getResolution()
 
     property value_ranges:
         def __get__(self):
@@ -221,13 +286,39 @@ cdef class AiFeatures(object):
 
             return values
 
+    property buffered_ai_supported:
+        def __get__(self):
+            return self.c0().getBufferedAiSupported()
+
     @property
     def sampling_method(self):
         return enums.SamplingMethod(self.c0().getSamplingMethod())
 
+    property channel_start_base:
+        def __get__(self):
+            return self.c0().getChannelStartBase()
+
+    property channel_count_base:
+        def __get__(self):
+            return self.c0().getChannelCountBase()
+
+    property convert_clock_sources:
+        def __get__(self):
+            cdef _c.ICollection[enums_c.SignalDrop]* collection = self.c0().getConvertClockSources()
+
+            raise_on_null(collection)
+
+            return [
+                enums.SignalDrop(collection.getItem(i))
+                for i in xrange(collection.getCount())]
+
     @property
     def convert_clock_range(self):
         return math_interval_from_c(self.c0().getConvertClockRange())
+
+    property burst_scan_supported:
+        def __get__(self):
+            return self.c0().getBurstScanSupported()
 
     @property
     def scan_clock_range(self):
@@ -285,6 +376,16 @@ cdef class AiCtrlBase(DeviceCtrlBase):
     property features:
         def __get__(self):
             return AiFeatures(self)
+
+    property channels:
+        def __get__(self):
+            cdef _c.ICollection[_c.AnalogInputChannel]* collection = self.c1().getChannels()
+
+            raise_on_null(collection)
+
+            return [
+                make_analog_input_channel(&(collection.getItem(i)), wards=[self])
+                for i in xrange(collection.getCount())]
 
     property channel_count:
         def __get__(self):

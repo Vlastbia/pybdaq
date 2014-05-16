@@ -16,12 +16,6 @@ cdef extern from "bdaqctrl.h" namespace "Automation::BDaq":
         int32_t getCount()
         T& getItem(int32_t index)
 
-    cppclass CjcSetting:
-        int32_t getChannel()
-        enums_c.ErrorCode setChannel(int32_t ch)
-        double getValue()
-        enums_c.ErrorCode setValue(double value)
-
     cppclass MathInterval:
         libc.stdint.int32_t Type
         double Min
@@ -40,6 +34,25 @@ cdef extern from "bdaqctrl.h" namespace "Automation::BDaq":
 
     enum:
         MAX_DEVICE_DESC_LEN
+
+    cppclass AnalogChannel:
+        int32_t getChannel()
+        enums_c.ValueRange getValueRange()
+        enums_c.ErrorCode setValueRange(enums_c.ValueRange value)
+
+    cppclass AnalogInputChannel(AnalogChannel):
+        enums_c.AiSignalType getSignalType()
+        enums_c.ErrorCode setSignalType(enums_c.AiSignalType value)
+        enums_c.BurnoutRetType getBurnoutRetType()
+        enums_c.ErrorCode setBurnoutRetType(enums_c.BurnoutRetType value)
+        double getBurnoutRetValue()
+        enums_c.ErrorCode setBurnoutRetValue(double value)
+
+    cppclass CjcSetting:
+        int32_t getChannel()
+        enums_c.ErrorCode setChannel(int32_t ch)
+        double getValue()
+        enums_c.ErrorCode setValue(double value)
 
     cppclass DeviceInformation:
         libc.stdint.int32_t DeviceNumber
@@ -61,13 +74,6 @@ cdef extern from "bdaqctrl.h" namespace "Automation::BDaq":
             libc.stddef.wchar_t* deviceDesc,
             enums_c.AccessMode mode,
             libc.stdint.int32_t moduleIndex)
-
-    #enums_c.ErrorCode AdxDeviceGetLinkageInfo(
-        #int32 deviceParent,
-        #int32 index,
-        #int32* deviceNumber,
-        #wchar_t* description,
-        #int32* subDeviceCount)
 
     #enums_c.ErrorCode AdxGetValueRangeInformation(
         #ValueRange   type,         /*IN*/
@@ -100,8 +106,8 @@ cdef extern from "bdaqctrl.h" namespace "Automation::BDaq":
         libcpp.bool getCanEditProperty()
         void* getDevice()
         void* getModule()
-        #virtual ICollection<DeviceTreeNode>* BDAQCALL getSupportedDevices() = 0;
-        #virtual ICollection<enums_c.AccessMode>*     BDAQCALL getSupportedModes() = 0;
+        #ICollection<DeviceTreeNode>* getSupportedDevices()
+        #ICollection<enums_c.AccessMode>* getSupportedModes()
 
     #
     # ANALOG INPUT
@@ -126,7 +132,7 @@ cdef extern from "bdaqctrl.h" namespace "Automation::BDaq":
         int32_t getChannelStartBase()
         int32_t getChannelCountBase()
 
-        #ICollection<SignalDrop>* getConvertClockSources()
+        ICollection[enums_c.SignalDrop]* getConvertClockSources()
         MathInterval getConvertClockRange()
 
         libcpp.bool getBurstScanSupported()
@@ -147,7 +153,7 @@ cdef extern from "bdaqctrl.h" namespace "Automation::BDaq":
 
     cppclass AiCtrlBase(DeviceCtrlBase):
         AiFeatures* getFeatures()
-        #AiChannelCollection* getChannels()
+        ICollection[AnalogInputChannel]* getChannels()
         int32_t getChannelCount()
 
     cppclass InstantAiCtrl(AiCtrlBase):
