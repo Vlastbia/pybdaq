@@ -1,7 +1,15 @@
 pybdaq
 ======
 
-This project provides an **unofficial**, **unsupported**, **third-party**
+**UNMAINTAINED:** this project is no longer being actively maintained.
+
+This repository has been left online in case it proves useful to you, but be aware that this
+code likely requires minor and major tweaks to be used with a recent driver package.
+
+Description
+-----------
+
+This project provided an **unofficial**, **unsupported**, **third-party**
 Python interface to Advantech DAQ hardware, in the form of a Cython wrapper for
 their C++ SDK.
 
