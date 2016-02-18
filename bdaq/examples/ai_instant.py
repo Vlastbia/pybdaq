@@ -1,37 +1,26 @@
 import time
-import plac
 import bdaq
+#import matplotlib.pyplot as pl
 
-
-@plac.annotations()
-def main(device_name="USB-4702, BID#0", start=0, count=1):
+def main(device_name="DemoDevice,BID#0", start=1, count=1):
     # set up the device
-    print "accessing device:", device_name
+    print ("accessing device: {}".format(device_name))
 
     instant_ai = bdaq.InstantAiCtrl()
 
     instant_ai.selected_device = bdaq.DeviceInformation(number=0)
 
-    # acquire data forever
-    try:
-        print "acquisition in progress"
+    print("starting acquisition")
 
-        count_max = instant_ai.features.channel_count_max
+    count_max = count
+    
+    for i in range(50):
+        scaled_data = instant_ai.read_scaled(start, count)
 
-        while True:
-            scaled_data = instant_ai.read_scaled(start, count)
+        for i, value in enumerate(scaled_data):
+            print("channel {} data: {:10.6f}".format((i + start) % count_max, value))
 
-            for (i, value) in enumerate(scaled_data):
-                print "channel {} data: {:10.6f}".format(
-                    (i + start) % count_max,
-                    value)
-
-            print
-
-            time.sleep(1.0)
-    finally:
-        instant_ai.dispose()
-
+        time.sleep(0.2)
 
 if __name__ == "__main__":
-    plac.call(main)
+    main()

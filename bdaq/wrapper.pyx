@@ -250,6 +250,8 @@ cdef class DeviceCtrlBase:
             raise Exception("cannot instantiate abstract base")
 
     def __dealloc__(self):
+        """this method is called when the object is destroyed, 
+        so there is no need to call dispose expicitly"""
         if self._this != NULL:
             self._this.Dispose()
 

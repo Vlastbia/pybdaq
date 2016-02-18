@@ -1,55 +1,31 @@
 pybdaq
 ======
 
-**UNMAINTAINED:** this project is no longer being actively maintained.
-
-This repository has been left online in case it proves useful to you, but be aware that this
-code likely requires minor and major tweaks to be used with a recent driver package.
+This is a fork of the original pybdaq project created by angaza.
+The main goal of this fork is to make it work on Windows.
+bdaqctrl.h is taken from 'C:\Advantech\DAQNavi\Inc' following installation of the DAQNavi_SDK_3.2.3.0.exe
 
 Description
 -----------
 
 This project provided an **unofficial**, **unsupported**, **third-party**
-Python interface to Advantech DAQ hardware, in the form of a Cython wrapper for
-their C++ SDK.
+Python interface to Advantech DAQ hardware, in the form of a Cython wrapper for their C++ SDK.
 
 Supported Functionality
 -----------------------
 
-The entirety of the API has not yet been wrapped. Initial support is limited to
-basic digital and analog I/O.
+The entirety of the API has not yet been wrapped. Initial support is limited to basic digital and analog I/O.
 
 Installation
 ------------
 
 ### Advantech SDK
 
-The first and essential step is to download and install the Advantech driver
-and SDK for Linux. These can be tricky to find, but are in fact [available from
-the Advantech
-site](http://support.advantech.com.tw/Support/DownloadSRDetail_New.aspx?SR_ID=1-LXHFQJ&Doc_Source=Download).
-
-This library has been most recently tested with
-`linux_driver_package_3.1.7.0_64bit.zip`. After downloading and extracting this
-package, install the following packages inside the "drivers" and "SDK"
-directories:
-
-* biokernbase-dkms
-* bio&lt;device&gt; (where &lt;device&gt; is, e.g., "4704")
-* libbio<device>
-* libbiodaq
-
-On a Debian-based OS, the typical installation method is `sudo dpkg -i`.
+The first and essential step is to download and install the Advantech driver and SDK for Windows. The most recent version if the installer could be found (as of 2016/02/18) at http://downloadt.advantech.com/download/downloadsr.aspx?File_Id=1-129ZX71
 
 ### Library
 
-After installing the Advantech software, installation of this Python library
-should be straightforward using pip and PyPI:
-
-```sh
-$ pip install pybdaq
-```
-
+After installing the Advantech software, installation of this Python library should be straightforward (Windows: TODO)
 As usual, the use of a virtualenv is strongly recommended.
 
 Credits
