@@ -155,14 +155,30 @@ cdef class DeviceInformation:
 
 
 cdef class AiFeatures(object):
+    
     cdef InstantAiCtrl _instant_ai
+    cdef public resolution
+    cdef public data_size
+    cdef public data_mask
+    cdef public channel_count_max
+    cdef public channel_type
+    cdef public overall_value_range
+    cdef public thermo_supported
+    cdef public buffered_ai_supported
+    cdef public channel_start_base
+    cdef public channel_count_base
+    cdef public burst_scan_supported
+    cdef public scan_count_max
+    cdef public trigger_supported
+    cdef public trigger_count
+    cdef public trigger1_supported
+    
 
     def __cinit__(self, InstantAiCtrl instant_ai):
+        print('AiFeatures.__cinit__')
         self._instant_ai = instant_ai
-
-        # extract feature values
         cdef _c.AiFeatures* features = self.c0()
-
+        
         self.resolution = features.getResolution()
         self.data_size = features.getDataSize()
         self.data_mask = features.getDataMask()
@@ -177,13 +193,7 @@ cdef class AiFeatures(object):
         self.scan_count_max = features.getScanCountMax()
         self.trigger_supported = features.getTriggerSupported()
         self.trigger_count = features.getTriggerCount()
-        self.trigger_1_supported = features.getTrigger1Supported()
-
-        # prevent modification
-        def setattr(self):
-            raise Exception("read-only property")
-
-        self.__setattr__ = setattr
+        self.trigger1_supported = features.getTrigger1Supported()
 
     cdef _c.AiFeatures* c0(self):
         return self._instant_ai.c2().getFeatures()
@@ -421,7 +431,8 @@ cdef class InstantDoCtrl(DoCtrlBase):
         cdef uint8_t[:] raw = cvarray(
             shape=(count,),
             itemsize=sizeof(uint8_t),
-            format="u")
+            format="B") # unsigned char
+       
         cdef enums_c.ErrorCode error = self.c3().Read(
             <int32_t>start,
             <int32_t>count,
@@ -440,7 +451,7 @@ cdef class InstantDoCtrl(DoCtrlBase):
         cdef uint8_t[:] raw = cvarray(
             shape=(len(data_bytes),),
             itemsize=sizeof(uint8_t),
-            format="B")
+            format="B") # unsigned char
         cdef int i
 
         for (i, v) in enumerate(map(int, data_bytes)):

@@ -12,12 +12,15 @@ compiler_args = ["-std=gnu++0x",
 extensions = [
     Extension("wrapper_enums", ["wrapper_enums.pyx"],
               language='c++', 
-              extra_compile_args=compiler_args),
+              extra_compile_args=compiler_args,
+              ),
     Extension("wrapper", ["wrapper.pyx"],
               language='c++', 
               extra_compile_args=compiler_args),
 ]
+
 setup(
     name = "pybdaq_extensions",
-    ext_modules = cythonize(extensions)
+    ext_modules = cythonize(extensions),
+    script_args = ['build_ext', '--inplace']
 )

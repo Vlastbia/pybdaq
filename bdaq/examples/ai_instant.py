@@ -12,7 +12,7 @@ def main(device_name="DemoDevice,BID#0", start=1, count=1):
 
     print("starting acquisition")
 
-    count_max = count
+    count_max = instant_ai.channel_count
     
     for i in range(50):
         scaled_data = instant_ai.read_scaled(start, count)
