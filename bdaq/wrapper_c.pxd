@@ -26,6 +26,27 @@ cdef extern from "bdaqctrl.h" namespace "Automation::BDaq":
         libc.stdint.int32_t Type
         double Min
         double Max
+        
+    cppclass DiintChannel:
+        int32_t getChannel()
+        libcpp.bool getEnabled()
+        enums_c.ErrorCode setEnabled(libcpp.bool value)
+        libcpp.bool getGated()
+        enums_c.ErrorCode setGated(libcpp.bool value)
+        enums_c.ActiveSignal getTrigEdge()
+        enums_c.ErrorCode setTrigEdge(enums_c.ActiveSignal value)
+
+    cppclass DiCosintPort:
+        int32_t getPort()
+        uint8_t getMask()
+        enums_c.ErrorCode setMask(uint8_t value)
+
+    cppclass DiPmintPort:
+        int32_t getPort()
+        uint8_t getMask()
+        enums_c.ErrorCode setMask(uint8_t value)
+        uint8_t getPattern()
+        enums_c.ErrorCode setPattern(uint8_t value)
 
     enums_c.ErrorCode AdxEnumToString(
         wchar_t* enumTypeName,
@@ -42,25 +63,25 @@ cdef extern from "bdaqctrl.h" namespace "Automation::BDaq":
         MAX_DEVICE_DESC_LEN
 
     cppclass DeviceInformation:
-        libc.stdint.int32_t DeviceNumber
+        int32_t DeviceNumber
         enums_c.AccessMode DeviceMode
-        libc.stdint.int32_t ModuleIndex
+        int32_t ModuleIndex
         libc.stddef.wchar_t Description[MAX_DEVICE_DESC_LEN]
 
         DeviceInformation()
         DeviceInformation(
-            libc.stdint.int32_t deviceNumber,
+            int32_t deviceNumber,
             enums_c.AccessMode mode,
-            libc.stdint.int32_t moduleIndex)
+            int32_t moduleIndex)
         DeviceInformation(
             libc.stddef.wchar_t* deviceDesc,
             enums_c.AccessMode mode,
-            libc.stdint.int32_t moduleIndex)
+            int32_t moduleIndex)
         void Init(
-            libc.stdint.int32_t deviceNumber,
+            int32_t deviceNumber,
             libc.stddef.wchar_t* deviceDesc,
             enums_c.AccessMode mode,
-            libc.stdint.int32_t moduleIndex)
+            int32_t moduleIndex)
 
     #enums_c.ErrorCode AdxDeviceGetLinkageInfo(
         #int32 deviceParent,
@@ -176,30 +197,83 @@ cdef extern from "bdaqctrl.h" namespace "Automation::BDaq":
     cppclass DioCtrlBase(DeviceCtrlBase):
         int32_t getPortCount()
         #ICollection<PortDirection>* getPortDirection()
+        
+    cppclass DiFeatures(DioFeatures):
+        ICollection[uint8_t]* getDataMask()
 
+#      // di noise filter features
+        libcpp.bool getNoiseFilterSupported()
+        ICollection[uint8_t]* getNoiseFilterOfChannels()
+        MathInterval getNoiseFilterBlockTimeRange()
+#
+#      // di interrupt features
+        libcpp.bool getDiintSupported()
+        libcpp.bool getDiintGateSupported()
+        libcpp.bool getDiCosintSupported()
+        libcpp.bool getDiPmintSupported()
+        ICollection[enums_c.ActiveSignal]*  getDiintTriggerEdges()
+        ICollection[uint8_t]* getDiintOfChannels()
+        ICollection[uint8_t]* getDiintGateOfChannels()
+        ICollection[uint8_t]* getDiCosintOfPorts()
+        ICollection[uint8_t]* getDiPmintOfPorts()
+        ICollection[int32_t]* getSnapEventSources()
+#
+#      // buffered di->basic features
+        libcpp.bool getBufferedDiSupported()
+        enums_c.SamplingMethod getSamplingMethod()
+#
+#      // buffered di->conversion clock features
+#      virtual ICollection<SignalDrop>*    BDAQCALL getConvertClockSources() = 0;
+        MathInterval getConvertClockRange()
+#
+#      // buffered di->burst scan
+        libcpp.bool getBurstScanSupported()
+#      virtual ICollection<SignalDrop>*    BDAQCALL getScanClockSources() = 0;
+        MathInterval getScanClockRange()
+        int32_t getScanCountMax()
+#
+#      // buffered di->trigger features
+        libcpp.bool getTriggerSupported()
+        int32_t getTriggerCount()
+#      virtual ICollection<SignalDrop>*    BDAQCALL getTriggerSources() = 0;
+#      virtual ICollection<TriggerAction>* BDAQCALL getTriggerActions() = 0;
+        MathInterval getTriggerDelayRange()
+        
+    cppclass DiCtrlBase(DioCtrlBase):
+        DiFeatures* getFeatures()
+        
+    cppclass InstantDiCtrl(DiCtrlBase):
+        enums_c.ErrorCode ReadAny(int32_t portStart, int32_t portCount, uint8_t* data)
+
+        enums_c.ErrorCode Read(int32_t port, uint8_t& data)
+        enums_c.ErrorCode Read(int32_t portStart, int32_t portCount, uint8_t* data)
+        
+        enums_c.ErrorCode SnapStart()
+        enums_c.ErrorCode SnapStop()
+        
+        ICollection[DiintChannel]* getDiintChannels()
+        ICollection[DiCosintPort]* getDiCosintPorts()
+        ICollection[DiPmintPort]* getDiPmintPorts()
+        
+        enums_c.ErrorCode ReadBit(int32_t portStart, int32_t bit, uint8_t* data)
+        
     cppclass DoFeatures(DioFeatures):
-        #virtual ICollection<uint8>*         BDAQCALL getDataMask() = 0;
-
+        ICollection[uint8_t]* getDataMask()
         #virtual ICollection<SignalDrop>*    BDAQCALL getDoFreezeSignalSources() = 0;
-
-        #virtual MathInterval                BDAQCALL getDoReflectWdtFeedIntervalRange() = 0;
-
+        MathInterval getDoReflectWdtFeedIntervalRange()
         libcpp.bool getBufferedDoSupported()
-        #virtual SamplingMethod              BDAQCALL getSamplingMethod() = 0;
-
+        enums_c.SamplingMethod getSamplingMethod()
         #virtual ICollection<SignalDrop>*    BDAQCALL getConvertClockSources() = 0;
-        #virtual MathInterval                BDAQCALL getConvertClockRange() = 0;
-
+        MathInterval getConvertClockRange()
         libcpp.bool getBurstScanSupported()
         #virtual ICollection<SignalDrop>*    BDAQCALL getScanClockSources() = 0;
-        #virtual MathInterval                BDAQCALL getScanClockRange() = 0;
+        MathInterval getScanClockRange()
         int32_t getScanCountMax()
-
         libcpp.bool getTriggerSupported()
         int32_t getTriggerCount()
         #virtual ICollection<SignalDrop>*    BDAQCALL getTriggerSources() = 0;
         #virtual ICollection<TriggerAction>* BDAQCALL getTriggerActions() = 0;
-        #virtual MathInterval                BDAQCALL getTriggerDelayRange() = 0;
+        MathInterval getTriggerDelayRange()
 
     cppclass DoCtrlBase(DioCtrlBase):
         DoFeatures* getFeatures()
@@ -221,8 +295,8 @@ cdef extern from "bdaqctrl.h" namespace "Automation::BDaq":
     #BufferedAiCtrl* AdxBufferedAiCtrlCreate()
     #InstantAoCtrl* AdxInstantAoCtrlCreate()
     #BufferedAoCtrl* AdxBufferedAoCtrlCreate()
-    #InstantDiCtrl* AdxInstantDiCtrlCreate()
-    #BufferedDiCtrl* AdxBufferedDiCtrlCreate()
+    InstantDiCtrl* AdxInstantDiCtrlCreate()
+#    BufferedDiCtrl* AdxBufferedDiCtrlCreate()
     InstantDoCtrl* AdxInstantDoCtrlCreate()
     #BufferedDoCtrl* AdxBufferedDoCtrlCreate()
     #EventCounterCtrl* AdxEventCounterCtrlCreate()

@@ -8,12 +8,14 @@ def main(device_name="DemoDevice,BID#0", start=1, count=1):
 
     instant_ai = bdaq.InstantAiCtrl()
 
-    instant_ai.selected_device = bdaq.DeviceInformation(number=0)
+    instant_ai.selected_device = bdaq.DeviceInformation(description=device_name)
+
+    print('AI resolution: {}'.format(instant_ai.features.resolution))
 
     print("starting acquisition")
 
     count_max = instant_ai.channel_count
-    
+
     for i in range(50):
         scaled_data = instant_ai.read_scaled(start, count)
 

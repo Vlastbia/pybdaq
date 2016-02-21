@@ -1,4 +1,5 @@
 import bdaq.wrapper_enums as enums
+from bdaq.helpers import pack_bits
 
 cimport libc.stdint
 cimport libcpp
@@ -11,50 +12,15 @@ from libc.stdint cimport (
     int32_t)
 from cython.view cimport array as cvarray
 from cython.operator cimport dereference as deref
+cdef extern from "Python.h":
+    wchar_t* PyUnicode_AsWideCharString(object, Py_ssize_t *)
 
 
 class BdaqError(Exception):
     def __init__(self, error_code):
         assert isinstance(error_code, enums.ErrorCode)
-
         super(BdaqError, self).__init__("bdaq error: {}".format(error_code))
-
         self.error_code = error_code
-
-
-def encode_wchar(string):
-    # TODO make this less obviously incorrect
-
-    if sizeof(wchar_t) == 2:
-        return string.encode("UTF-16")
-    elif sizeof(wchar_t) == 4:
-        return string.encode("UTF-32")
-    else:
-        assert False
-
-
-def pack_bits(bools):
-    """Pack array of bools into bits."""
-
-    if len(bools) % 8 != 0:
-        raise ValueError("list length must be multiple of 8")
-
-    cdef int i
-
-    bytes_ = []
-
-    for i in xrange(len(bools) / 8):
-        b = 0
-
-        for v in reversed(bools[i * 8:(i + 1) * 8]):
-            b <<= 1
-
-            b |= int(bool(v))
-
-        bytes_.append(b)
-
-    return bytes_
-
 
 cdef libcpp.bool raise_on_null(void* pointer) except False:
     if pointer == NULL:
@@ -137,10 +103,10 @@ cdef class DeviceInformation:
         self._this = new _c.DeviceInformation()
 
         cdef wchar_t* description_wchar = NULL
+        cdef Py_ssize_t length
 
         if description is not None:
-            description_wchar_py = encode_wchar(description)
-            description_wchar = <libc.stddef.wchar_t*><char*>description_wchar_py
+            description_wchar = PyUnicode_AsWideCharString(description, &length)
 
         self._this.Init(
             -1 if number is None else number,
@@ -155,7 +121,7 @@ cdef class DeviceInformation:
 
 
 cdef class AiFeatures(object):
-    
+
     cdef InstantAiCtrl _instant_ai
     cdef public resolution
     cdef public data_size
@@ -172,13 +138,13 @@ cdef class AiFeatures(object):
     cdef public trigger_supported
     cdef public trigger_count
     cdef public trigger1_supported
-    
+
 
     def __cinit__(self, InstantAiCtrl instant_ai):
-        print('AiFeatures.__cinit__')
+
         self._instant_ai = instant_ai
         cdef _c.AiFeatures* features = self.c0()
-        
+
         self.resolution = features.getResolution()
         self.data_size = features.getDataSize()
         self.data_mask = features.getDataMask()
@@ -200,36 +166,18 @@ cdef class AiFeatures(object):
 
     property value_ranges:
         def __get__(self):
-            values = []
-
             cdef _c.ICollection[enums_c.ValueRange]* collection = self.c0().getValueRanges()
-
-            for i in xrange(collection.getCount()):
-                values.append(enums.ValueRange(collection.getItem(i)))
-
-            return values
+            return [enums.ValueRange(collection.getItem(i)) for i in range(collection.getCount())]
 
     property burnout_return_types:
         def __get__(self):
-            values = []
-
             cdef _c.ICollection[enums_c.BurnoutRetType]* collection = self.c0().getBurnoutReturnTypes()
-
-            for i in xrange(collection.getCount()):
-                values.append(enums.BurnoutRetType(collection.getItem(i)))
-
-            return values
+            return [enums.BurnoutRetType(collection.getItem(i)) for i in range(collection.getCount())]
 
     property cjc_channels:
         def __get__(self):
-            values = []
-
             cdef _c.ICollection[int32_t]* collection = self.c0().getCjcChannels()
-
-            for i in xrange(collection.getCount()):
-                values.append(collection.getItem(i))
-
-            return values
+            return [collection.getItem(i) for i in range(collection.getCount())]
 
     @property
     def sampling_method(self):
@@ -237,19 +185,23 @@ cdef class AiFeatures(object):
 
     @property
     def convert_clock_range(self):
-        return math_interval_from_c(self.c0().getConvertClockRange())
+        if self.buffered_ai_supported:
+            return math_interval_from_c(self.c0().getConvertClockRange())
 
     @property
     def scan_clock_range(self):
-        return math_interval_from_c(self.c0().getScanClockRange())
+        if self.buffered_ai_supported:
+            return math_interval_from_c(self.c0().getScanClockRange())
 
     @property
     def trigger_delay_range(self):
-        return math_interval_from_c(self.c0().getTriggerDelayRange())
+        if self.trigger_supported:
+            return math_interval_from_c(self.c0().getTriggerDelayRange())
 
     @property
     def trigger1_delay_range(self):
-        return math_interval_from_c(self.c0().getTrigger1DelayRange())
+        if self.trigger_supported:
+            return math_interval_from_c(self.c0().getTrigger1DelayRange())
 
 
 cdef class DeviceCtrlBase:
@@ -260,7 +212,7 @@ cdef class DeviceCtrlBase:
             raise Exception("cannot instantiate abstract base")
 
     def __dealloc__(self):
-        """this method is called when the object is destroyed, 
+        """this method is called when the object is destroyed,
         so there is no need to call dispose expicitly"""
         if self._this != NULL:
             self._this.Dispose()
@@ -350,19 +302,26 @@ cdef class InstantAiCtrl(AiCtrlBase):
 # DIGITAL I/O
 #
 
-class DioFeatures(object):
-    def __init__(self, DioCtrlBase di_or_do_base):
+cdef class DioFeatures:
+    cdef public port_programmable
+    cdef public port_count
+    cdef public di_supported
+    cdef public do_supported
+    cdef public channel_count_max
+
+    def __cinit__(self, DioCtrlBase di_or_do_base):
         # extract the features object
         cdef _c.DioFeatures* features
         cdef _c.DoCtrlBase* do_base_c
 
-        #if isinstance(di_or_do_base, DiCtrlBase):
-            #raise NotImplementedError()
-        if isinstance(di_or_do_base, DoCtrlBase):
+        if isinstance(di_or_do_base, DiCtrlBase):
+            di_base_c = <_c.DiCtrlBase*>di_or_do_base._this
+            raise_on_null(di_base_c)
+            features = di_base_c.getFeatures()
+
+        elif isinstance(di_or_do_base, DoCtrlBase):
             do_base_c = <_c.DoCtrlBase*>di_or_do_base._this
-
             raise_on_null(do_base_c)
-
             features = do_base_c.getFeatures()
         else:
             assert False
@@ -373,12 +332,6 @@ class DioFeatures(object):
         self.di_supported = features.getDiSupported()
         self.do_supported = features.getDoSupported()
         self.channel_count_max = features.getChannelCountMax()
-
-        # prevent modification
-        def setattr(self):
-            raise Exception("read-only property")
-
-        self.__setattr__ = setattr
 
 
 cdef class DioCtrlBase(DeviceCtrlBase):
@@ -392,8 +345,201 @@ cdef class DioCtrlBase(DeviceCtrlBase):
             return self.c1().getPortCount()
 
 
-class DoFeatures(DioFeatures):
-    def __init__(self, DoCtrlBase do_base):
+cdef class DiFeatures(DioFeatures):
+    cdef DiCtrlBase _di_base
+#    cdef public data_mask
+    cdef public noise_filter_supported
+#    cdef public noise_filter_of_channels
+#    cdef public noise_filter_block_time_range
+    cdef public di_int_supported
+    cdef public di_int_gate_supported
+    cdef public di_cos_int_supported
+    cdef public di_pm_int_supported
+#    cdef public di_int_trigger_edges
+#    cdef public di_int_of_channels
+#    cdef public di_int_gate_of_of_channels
+#    cdef public di_cos_int_of_ports
+#    cdef public di_pm_int_of_ports
+#    cdef public snap_event_sources
+    cdef public buffered_di_supported
+#    cdef public convert_clock_range
+    cdef public burst_scan_supported
+#    cdef public scan_clock_range
+    cdef public scan_count_max
+    cdef public trigger_supported
+    cdef public trigger_count
+#    cdef public trigger_delay_range
+
+    def __cinit__(self, DiCtrlBase di_base):
+        raise_on_null(di_base._this)
+
+        self._di_base = di_base
+
+        cdef _c.DiFeatures* features = self.c0()
+
+        self.noise_filter_supported = features.getNoiseFilterSupported()
+        self.di_int_supported = features.getDiintSupported()
+        self.di_int_gate_supported = features.getDiintGateSupported()
+        self.di_cos_int_supported = features.getDiCosintSupported()
+        self.di_pm_int_supported = features.getDiPmintSupported()
+        self.buffered_di_supported = features.getBufferedDiSupported()
+##        getConvertClockSources()
+        self.burst_scan_supported = features.getBurstScanSupported()
+##        getScanClockSources()
+        self.scan_count_max = features.getScanCountMax()
+        self.trigger_supported = features.getTriggerSupported()
+        self.trigger_count = features.getTriggerCount()
+##        getTriggerSources()
+##        getTriggerActions()
+
+        DioFeatures.__init__(self, di_base)
+
+    cdef _c.DiFeatures* c0(self):
+        return self._di_base.c2().getFeatures()
+
+    property data_mask:
+        def __get__(self):
+            cdef _c.ICollection[uint8_t]* collection = self.c0().getDataMask()
+            return [collection.getItem(i) for i in range(collection.getCount())]
+
+    property noise_filter_of_channels:
+        def __get__(self):
+            cdef _c.ICollection[uint8_t]* collection
+            if self.noise_filter_supported:
+                collection = self.c0().getNoiseFilterOfChannels()
+                return [collection.getItem(i) for i in range(collection.getCount())]
+
+#    property di_int_trigger_edges:
+#        def __get__(self):
+#            cdef _c.ICollection[enums_c.ActiveSignal]* collection = self.c0().getDiintTriggerEdges()
+#            return [enums.ActiveSignal(collection.getItem(i) for i in range(collection.getCount()))]
+
+    property di_int_of_channels:
+        def __get__(self):
+            cdef _c.ICollection[uint8_t]* collection
+            if self.di_int_supported:
+                collection = self.c0().getDiintOfChannels()
+                return [collection.getItem(i) for i in range(collection.getCount())]
+
+    property di_int_gate_of_of_channels:
+        def __get__(self):
+            cdef _c.ICollection[uint8_t]* collection
+            if self.di_int_gate_supported:
+                collection = self.c0().getDiintGateOfChannels()
+                return [collection.getItem(i) for i in range(collection.getCount())]
+
+    property di_cos_int_of_ports:
+        def __get__(self):
+            cdef _c.ICollection[uint8_t]* collection
+            if self.di_cos_int_supported:
+                collection = self.c0().getDiCosintOfPorts()
+                return [collection.getItem(i) for i in range(collection.getCount())]
+
+    property di_pm_int_of_ports:
+        def __get__(self):
+            cdef _c.ICollection[uint8_t]* collection
+            if self.di_pm_int_supported:
+                collection = self.c0().getDiPmintOfPorts()
+                return [collection.getItem(i) for i in range(collection.getCount())]
+
+    property snap_event_sources:
+        def __get__(self):
+            cdef _c.ICollection[int32_t]* collection = self.c0().getSnapEventSources()
+            return [collection.getItem(i) for i in range(collection.getCount())]
+
+    @property
+    def sampling_method(self):
+        return enums.SamplingMethod(self.c0().getSamplingMethod())
+
+    @property
+    def trigger_delay_range(self):
+        if self.trigger_supported:
+            return math_interval_from_c(self.c0().getTriggerDelayRange())
+
+    @property
+    def scan_clock_range(self):
+        if self.buffered_di_supported:
+            return math_interval_from_c(self.c0().getScanClockRange())
+
+    @property
+    def convert_clock_range(self):
+        if self.buffered_di_supported:
+            return math_interval_from_c(self.c0().getConvertClockRange())
+
+    @property
+    def noise_filter_block_time_range(self):
+        if self.noise_filter_supported:
+            return math_interval_from_c(self.c0().getNoiseFilterBlockTimeRange())
+
+
+cdef class DiCtrlBase(DioCtrlBase):
+    cdef _c.DiCtrlBase* c2(self):
+        raise_on_null(self._this)
+
+        return <_c.DiCtrlBase*>self._this
+
+    property features:
+        def __get__(self):
+            return DiFeatures(self)
+
+
+cdef class InstantDiCtrl(DiCtrlBase):
+    def __cinit__(self):
+        self._this = _c.AdxInstantDiCtrlCreate()
+
+    cdef _c.InstantDiCtrl* c3(self):
+        raise_on_null(self._this)
+        return <_c.InstantDiCtrl*>self._this
+
+    def snap_start(self):
+        cdef enums_c.ErrorCode error = self.c3().SnapStart()
+        raise_on_failure(error)
+
+    def snap_stop(self):
+        cdef enums_c.ErrorCode error = self.c3().SnapStop()
+        raise_on_failure(error)
+
+    def read(self, start, count=1):
+        cdef uint8_t[:] raw = cvarray(
+            shape=(count,),
+            itemsize=sizeof(uint8_t),
+            format="B") # unsigned char
+
+        cdef enums_c.ErrorCode error = self.c3().Read(
+            <int32_t>start,
+            <int32_t>count,
+            &raw[0])
+
+        raise_on_failure(error)
+
+        # XXX unpack bits into boolean array
+        return list(raw)
+
+    def read_bit(self, start, bit):
+        cdef uint8_t[:] raw = cvarray(
+            shape=(1,),
+            itemsize=sizeof(uint8_t),
+            format="B") # unsigned char
+
+        cdef enums_c.ErrorCode error = self.c3().ReadBit(
+            <int32_t>start,
+            <int32_t>bit,
+            &raw[0])
+
+        raise_on_failure(error)
+
+        # XXX unpack bits into boolean array
+        return list(raw)
+
+
+cdef class DoFeatures(DioFeatures):
+    cdef public buffered_do_supported
+    cdef public burst_scan_supported
+    cdef public scan_count_max
+    cdef public trigger_supported
+    cdef public trigger_count
+
+    def __cinit__(self, DoCtrlBase do_base):
         raise_on_null(do_base._this)
 
         cdef _c.DoFeatures* features = do_base.c2().getFeatures()
@@ -432,7 +578,7 @@ cdef class InstantDoCtrl(DoCtrlBase):
             shape=(count,),
             itemsize=sizeof(uint8_t),
             format="B") # unsigned char
-       
+
         cdef enums_c.ErrorCode error = self.c3().Read(
             <int32_t>start,
             <int32_t>count,
